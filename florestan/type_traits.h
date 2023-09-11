@@ -13,7 +13,7 @@
 // 2. allocated_info(POINTER_OR_ARRAY) -> allocated_record
 // 3. allocated_record  (typedef struct __allocated_record)
 //      .name           (const char*)
-//      .method         (enum: allocated, fixed, dynamic)
+//      .method         (enum: dynamic, allocated, fixed)
 //                          * allocated and fixed pointer variable can show the correct sizes,
 //                            while dynamic record cannot show any specific size. Have your own count!
 //      .pointer_depth  (uint8_t / unsigned char)
@@ -486,7 +486,6 @@ default: 0 )
     unsigned long long****: sizeof(unsigned long long), const unsigned long long****: sizeof(unsigned long long), \
 default: sizeof(__VA_ARGS__) )
 
-
 #define __type_num(...) _Generic((__VA_ARGS__), \
     bool: 1,                 const bool: 2, \
     char: 3,                 const char: 4, \
@@ -606,25 +605,25 @@ default: sizeof(__VA_ARGS__) )
 #endif
 #define __fixed_arraysize(x) ((size_t)sizeof(x) / (size_t)sizeof(x[0]))
 #define __is_allocated(x) (alloc_sizeof(x) > 0)
-#define __is_fixed_array(x) ((size_t)sizeof(x) != (size_t)sizeof(void*))
+#define __is_fixed_array(x)  ((size_t)sizeof(x) != (size_t)sizeof(void*))
 // Node: the checking method of __is_fixed_array(x) CONFUSES the cases of fixed 8-byte arrays like char[8], short[4], and int[2],
 // because it is ambiguous that 8 bytes are the same size of one pointer variable.
 // But, you must already know what kind of 8-byte array you have!
 
 typedef struct __allocated_record {
     const char* name;
-    enum methods: unsigned char { allocated, fixed, dynamic, ambiguous } method;
+    enum methods: unsigned char { dynamic, allocated, fixed } method;
     unsigned char pointer_depth;
-    size_t size;
     size_t typesize;
+    size_t totalsize;
     size_t arraysize;
 } allocated_record;
 #define __make_allocated_record(...) ((allocated_record){ \
     #__VA_ARGS__, \
     (__is_allocated(__VA_ARGS__) ? allocated : (__is_fixed_array(__VA_ARGS__) ? fixed : dynamic)), \
     __pointer_depth(__VA_ARGS__), \
-    (__is_fixed_array(__VA_ARGS__) ? sizeof(__VA_ARGS__) : alloc_sizeof(__VA_ARGS__)), \
     (__is_fixed_array(__VA_ARGS__) ? sizeof(*__VA_ARGS__) : __sizeof(*__VA_ARGS__)), \
+    (__is_fixed_array(__VA_ARGS__) ? sizeof(__VA_ARGS__) : alloc_sizeof(__VA_ARGS__)), \
     (__is_fixed_array(__VA_ARGS__) ? __fixed_arraysize(__VA_ARGS__) : alloc_sizeof(__VA_ARGS__) / __sizeof(*__VA_ARGS__)) })
 #define allocated_info(...) __make_allocated_record(__VA_ARGS__)
 
